@@ -38,16 +38,7 @@ def apply_bias_trick(X):
         zeroth position (m instances over n+1 features).
     """
 
-    if X.ndim == 1:
-        # X is a 1 dimensional array
-        # we turn it into a column
-        X_col = X.reshape(-1, 1)
-        ones_col = np.ones((X_col.shape[0], 1))  # create a column with X's num of rows
-        X_with_ones = np.concatenate((ones_col, X_col), axis=1)
-    else:
-        ones_col = np.ones((X.shape[0], 1))  # create a column with X's num of rows
-        X_with_ones = np.concatenate((ones_col, X), axis=1)
-
+    X_with_ones = np.column_stack((np.ones(X.shape[0]), X))
     X = X_with_ones
     return X
 
@@ -193,16 +184,17 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     Returns:
     - alpha_dict: A python dictionary - {alpha_value : validation_loss}
     """
-    
+
     alphas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
-    alpha_dict = {} # {alpha_value: validation_loss}
-    ###########################################################################
-    # TODO: Implement the function and find the best alpha value.             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    alpha_dict = {}  # {alpha_value: validation_loss}
+
+    n = X_train.shape[1]  # number of features
+    theta_rand = np.random.random(n)  # initialize n random theta values in [0,1)
+    for alpha in alphas:
+        theta, _ = efficient_gradient_descent(X_train, y_train, theta_rand, alpha, iterations)
+        val_loss = compute_cost(X_val, y_val, theta)
+        alpha_dict[alpha] = val_loss
+
     return alpha_dict
 
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterations):
