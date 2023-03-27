@@ -162,10 +162,10 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
 
         cost_value = compute_cost(X, y, theta)
 
-        if J_history and (J_history[-1] - cost_value) < 1e-8:
-            break
-
         J_history.append(cost_value)
+
+        if J_history and (cost_value - J_history[-1]) < 1e-8:
+            break
 
     return theta, J_history
 
