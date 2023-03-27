@@ -162,11 +162,11 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
 
         cost_value = compute_cost(X, y, theta)
 
-        J_history.append(cost_value)
-
-        if J_history and (cost_value - J_history[-1]) < 1e-8:
+        if J_history and (J_history[-1] - cost_value) < 1e-8:
             break
 
+        J_history.append(cost_value)
+        print(J_history)
     return theta, J_history
 
 def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
