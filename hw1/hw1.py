@@ -62,8 +62,9 @@ def compute_cost(X, y, theta):
     div_avg = 1 / (2 * m)
     h = X.dot(theta)  # hypothesis function
 
-    J = div_avg * np.sum(np.square((h - y)))
+    J = div_avg * np.sum((h - y) ** 2)
     return J
+
 
 def gradient_descent(X, y, theta, alpha, num_iters):
     """
@@ -92,16 +93,17 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     m = X.shape[0]  # number of instances
 
     for i in range(num_iters):
-        div_avg = (alpha / m)
-        h = X.dot(theta)  # hypothesis function
-        product = np.dot(X.T, h - y)  # (h_theta(x(i) - y(i))* x_j
 
-        theta = theta - (div_avg * product)  # gradient descent
+        h = X.dot(theta)  # hypothesis function
+        gradient = (1/m) * np.dot(X.T, h-y)
+
+        theta = theta - alpha*gradient  # gradient descent
 
         cost_value = compute_cost(X, y, theta)
         J_history.append(cost_value)
 
     return theta, J_history
+
 
 def compute_pinv(X, y):
     """
@@ -154,11 +156,9 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     m = X.shape[0]  # number of instances
 
     for i in range(num_iters):
-        div_avg = (alpha / m)
         h = X.dot(theta)  # hypothesis function
-        product = np.dot(X.T, h - y)  # (h_theta(x(i) - y(i))* x_j
-
-        theta = theta - (div_avg * product)  # gradient descent
+        gradient = (1/m) * np.dot(X.T, h-y)  # (h(x^(i)) - y^(i)) * x_j^(i)
+        theta = theta - alpha * gradient  # gradient descent
 
         cost_value = compute_cost(X, y, theta)
 
@@ -189,6 +189,7 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     alpha_dict = {}  # {alpha_value: validation_loss}
 
     n = X_train.shape[1]  # number of features
+    np.random.seed(42)
     theta_rand = np.random.random(n)  # initialize n random theta values in [0,1)
     for alpha in alphas:
         theta, _ = efficient_gradient_descent(X_train, y_train, theta_rand, alpha, iterations)
