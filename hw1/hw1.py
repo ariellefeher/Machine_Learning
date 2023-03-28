@@ -198,6 +198,7 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
 
     return alpha_dict
 
+
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterations):
     """
     Forward feature selection is a greedy, iterative algorithm used to 
@@ -217,13 +218,37 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterat
     - selected_features: A list of selected top 5 feature indices
     """
     selected_features = []
-    #####c######################################################################
-    # TODO: Implement the function and find the best alpha value.             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    num_features = X_train.shape[1]
+    np.random.seed(42)
+
+    while len(selected_features) < 5:
+        feature_cost_dict = {}
+
+        # Iterate all features exclude bias column
+        for i in range(1, num_features):
+            if i not in selected_features:
+                selected_features.append(i)
+
+                selected_with_bias = [0] + selected_features
+                theta_rand = np.random.random(len(selected_with_bias))
+                curr_X_train = X_train[:, selected_with_bias]  # all the selected features columns
+                curr_X_val = X_val[:, selected_with_bias]
+
+                curr_theta, curr_J_history = efficient_gradient_descent(
+                    curr_X_train,
+                    y_train,
+                    theta_rand,
+                    best_alpha,
+                    iterations
+                )
+
+                val_loss = compute_cost(curr_X_val, y_val, curr_theta)
+                feature_cost_dict[i] = val_loss
+                selected_features.remove(i)
+
+        best_feature_index = min(feature_cost_dict, key=feature_cost_dict.get)
+        selected_features.append(best_feature_index)
+
     return selected_features
 
 def create_square_features(df):
