@@ -20,8 +20,8 @@ def preprocess(X,y):
     - X: The mean normalized inputs.
     - y: The mean normalized labels.
     """
-    X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
-    y = (y - np.mean(y, axis=0)) / np.std(y, axis=0)
+    X = (X - np.mean(X, axis=0)) / (np.amax(X, axis=0) - np.amin(X, axis=0))
+    y = (y - np.mean(y, axis=0)) / (np.amax(y, axis=0) - np.amin(y, axis=0))
 
     return X, y
 
@@ -62,7 +62,7 @@ def compute_cost(X, y, theta):
     div_avg = 1 / (2 * m)
     h = X.dot(theta)  # hypothesis function
 
-    J = div_avg * np.sum((h - y) ** 2)
+    J = div_avg * np.sum(np.square((h - y)))
     return J
 
 def gradient_descent(X, y, theta, alpha, num_iters):
@@ -85,7 +85,7 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     - theta: The learned parameters of your model.
     - J_history: the loss value for every iteration.
     """
-    
+
     theta = theta.copy()  # optional: theta outside the function will not change
     J_history = []  # Use a python list to save the cost value in every iteration
 
@@ -148,9 +148,9 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     - theta: The learned parameters of your model.
     - J_history: the loss value for every iteration.
     """
-    
-    theta = theta.copy() # optional: theta outside the function will not change
-    J_history = [] # Use a python list to save the cost value in every iteration
+
+    theta = theta.copy()  # optional: theta outside the function will not change
+    J_history = []  # Use a python list to save the cost value in every iteration
     m = X.shape[0]  # number of instances
 
     for i in range(num_iters):
@@ -166,8 +166,8 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
             break
 
         J_history.append(cost_value)
-        print(J_history)
     return theta, J_history
+
 
 def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     """
