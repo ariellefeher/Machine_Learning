@@ -21,7 +21,7 @@ def preprocess(X,y):
     - y: The mean normalized labels.
     """
     X = (X - np.mean(X, axis=0)) / (np.amax(X, axis=0) - np.amin(X, axis=0))
-    y = (y - np.mean(y, axis=0)) / (np.amax(y, axis=0) - np.amin(y, axis=0))
+    y = (y - np.mean(y)) / (np.max(y) - np.min(y))
 
     return X, y
 
@@ -59,10 +59,10 @@ def compute_cost(X, y, theta):
     
     J = 0  # We use J for the cost.
     m = X.shape[0]
-    div_avg = 1 / (2 * m)
     h = X.dot(theta)  # hypothesis function
+    h_minus_y = h - y
 
-    J = div_avg * np.sum((h - y) ** 2)
+    J = np.sum(h_minus_y ** 2) / (2 * m)
     return J
 
 
@@ -93,12 +93,9 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     m = X.shape[0]  # number of instances
 
     for i in range(num_iters):
-
-        h = X.dot(theta)  # hypothesis function
-        gradient = (1/m) * np.dot(X.T, h-y)
-
-        theta = theta - alpha*gradient  # gradient descent
-
+        h = np.dot(X, theta)  # hypothesis function
+        h_minus_y = h - y
+        theta = theta - (alpha / m) * np.dot(X.T, h_minus_y)
         cost_value = compute_cost(X, y, theta)
         J_history.append(cost_value)
 
@@ -156,16 +153,15 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     m = X.shape[0]  # number of instances
 
     for i in range(num_iters):
-        h = X.dot(theta)  # hypothesis function
-        gradient = (1/m) * np.dot(X.T, h-y)  # (h(x^(i)) - y^(i)) * x_j^(i)
-        theta = theta - alpha * gradient  # gradient descent
-
+        h = np.dot(X, theta)  # hypothesis function
+        h_minus_y = h - y
+        theta = theta - (alpha/m) * np.dot(X.T, h_minus_y)
         cost_value = compute_cost(X, y, theta)
+        J_history.append(cost_value)
 
-        if J_history and (J_history[-1] - cost_value) < 1e-8:
+        if i > 0 and (J_history[i - 1] - J_history[i]) < 1e-8:
             break
 
-        J_history.append(cost_value)
     return theta, J_history
 
 
@@ -222,7 +218,7 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterat
     np.random.seed(42)
     theta_rand = np.random.random(6)  # 1 bias theta and 5 feature thetas
 
-    while len(selected_features) < 5:
+    while len(selected_features) < 5 and len(selected_features) < num_features:
         feature_cost_dict = {}
         temp_selected_features = selected_features.copy()
         for i in range(0, num_features):
@@ -267,11 +263,10 @@ def create_square_features(df):
     """
 
     df_poly = df.copy()
-    ###########################################################################
-    # TODO: Implement the function to add polynomial features                 #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    cols = df_poly.columns
+
+    poly_features = {col + "^2": df_poly[col] ** 2 for col in cols}
+
+    df_poly = pd.concat([df, pd.DataFrame(poly_features, index=df.index)], axis=1)
+
     return df_poly
