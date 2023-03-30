@@ -220,36 +220,39 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterat
     selected_features = []
     num_features = X_train.shape[1]
     np.random.seed(42)
+    theta_rand = np.random.random(6)  # 1 bias theta and 5 feature thetas
 
     while len(selected_features) < 5:
         feature_cost_dict = {}
+        temp_selected_features = selected_features.copy()
+        for i in range(0, num_features):
+            if i not in temp_selected_features:
+                temp_selected_features.append(i)
 
-        # Iterate all features exclude bias column
-        for i in range(1, num_features):
-            if i not in selected_features:
-                selected_features.append(i)
+                curr_theta = theta_rand[:len(selected_features) + 1]  # current num of selected features + bias
 
-                selected_with_bias = [0] + selected_features
-                theta_rand = np.random.random(len(selected_with_bias))
-                curr_X_train = X_train[:, selected_with_bias]  # all the selected features columns
-                curr_X_val = X_val[:, selected_with_bias]
+                # create a sub matrix of selected features columns, append bias column
+                curr_X_train = apply_bias_trick(X_train[:, selected_features])
+                curr_X_val = apply_bias_trick(X_val[:, selected_features])
 
-                curr_theta, curr_J_history = efficient_gradient_descent(
+                best_theta, curr_J_history = efficient_gradient_descent(
                     curr_X_train,
                     y_train,
-                    theta_rand,
+                    curr_theta,
                     best_alpha,
                     iterations
                 )
 
-                val_loss = compute_cost(curr_X_val, y_val, curr_theta)
+                val_loss = compute_cost(curr_X_val, y_val, best_theta)
                 feature_cost_dict[i] = val_loss
-                selected_features.remove(i)
+                temp_selected_features.remove(i)
 
-        best_feature_index = min(feature_cost_dict, key=feature_cost_dict.get)
+        sorted_features = sorted(feature_cost_dict.items(), key=lambda x: x[1])
+        best_feature_index = sorted_features[0][0]
         selected_features.append(best_feature_index)
 
     return selected_features
+
 
 def create_square_features(df):
     """
