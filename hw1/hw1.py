@@ -59,6 +59,7 @@ def compute_cost(X, y, theta):
     
     J = 0  # We use J for the cost.
     m = X.shape[0]
+    div_avg = 1 / (2 * m)
     h = X.dot(theta)  # hypothesis function
     h_minus_y = h - y
 
@@ -157,6 +158,10 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
         h_minus_y = h - y
         theta = theta - (alpha/m) * np.dot(X.T, h_minus_y)
         cost_value = compute_cost(X, y, theta)
+
+        if J_history and (J_history[-1] - cost_value) < 1e-8:
+            break
+
         J_history.append(cost_value)
 
         if i > 0 and (J_history[i - 1] - J_history[i]) < 1e-8:
