@@ -217,28 +217,28 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterat
     num_features = X_train.shape[1]
     np.random.seed(42)
     theta_rand = np.random.random(6)  # 1 bias theta and 5 feature thetas
-
     while len(selected_features) < 5 and len(selected_features) < num_features:
-        feature_cost_dict = {}
-        temp_selected_features = selected_features.copy()
-        for i in range(0, num_features):
-            if i not in temp_selected_features:
-                temp_selected_features.append(i)
 
-                curr_theta = theta_rand[:len(selected_features) + 1]  # current num of selected features + bias
+        feature_cost_dict = {}
+        temp_selected_features = selected_features.copy()  # copying updated best features list for edit safety
+
+        for i in range(num_features):
+            if i not in temp_selected_features:
+
+                temp_selected_features.append(i)
+                curr_theta = theta_rand[:len(temp_selected_features) + 1]  # current num of selected features + bias
 
                 # create a sub matrix of selected features columns, append bias column
-                curr_X_train = apply_bias_trick(X_train[:, selected_features])
-                curr_X_val = apply_bias_trick(X_val[:, selected_features])
+                curr_X_train = apply_bias_trick(X_train[:, temp_selected_features])
+                curr_X_val = apply_bias_trick(X_val[:, temp_selected_features])
 
-                best_theta, curr_J_history = efficient_gradient_descent(
+                best_theta, _ = efficient_gradient_descent(
                     curr_X_train,
                     y_train,
                     curr_theta,
                     best_alpha,
                     iterations
                 )
-
                 val_loss = compute_cost(curr_X_val, y_val, best_theta)
                 feature_cost_dict[i] = val_loss
                 temp_selected_features.remove(i)
@@ -265,8 +265,12 @@ def create_square_features(df):
     df_poly = df.copy()
     cols = df_poly.columns
 
-    poly_features = {col + "^2": df_poly[col] ** 2 for col in cols}
+    poly_features = {f"{col}^2": df_poly[col] ** 2 for col in cols}
+    column_combos = {f"{col1}*{col2}": df_poly[col1]*df_poly[col2]
+                     for i, col1 in enumerate(cols)
+                     for col2 in cols[i+1:]}
 
     df_poly = pd.concat([df, pd.DataFrame(poly_features, index=df.index)], axis=1)
+    df_poly = pd.concat([df_poly, pd.DataFrame(column_combos, index=df.index)], axis=1)
 
     return df_poly
