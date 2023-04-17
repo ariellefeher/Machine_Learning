@@ -95,11 +95,11 @@ def calc_entropy(data):
     """
     entropy = 0.0
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    labels = labels = data[:, -1]
+    _, label_counts = np.unique(labels, return_counts=True)
+    label_probs = label_counts / len(labels)
+    label_log_probs = np.log2(label_probs)
+    entropy = -1 * sum(label_probs * label_log_probs)
     ###########################################################################
     return entropy
 
