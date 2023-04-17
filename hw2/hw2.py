@@ -77,7 +77,7 @@ def calc_gini(data):
     ###########################################################################
     labels = labels = data[:, -1]
     _, label_counts = np.unique(labels, return_counts=True)  # We ignore sorted values
-    label_probs = label_counts / len(labels)
+    label_probs = label_counts / len(labels)  # is a nparray
     gini = 1 - sum(label_probs ** 2)
     ###########################################################################
     return gini
