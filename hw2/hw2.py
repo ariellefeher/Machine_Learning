@@ -75,7 +75,7 @@ def calc_gini(data):
     """
     gini = 0.0
     ###########################################################################
-    labels = labels = data[:, -1]
+    labels = data[:, -1]
     _, label_counts = np.unique(labels, return_counts=True)  # We ignore sorted values
     label_probs = label_counts / len(labels)  # is a nparray
     gini = 1 - sum(label_probs ** 2)
@@ -95,13 +95,14 @@ def calc_entropy(data):
     """
     entropy = 0.0
     ###########################################################################
-    labels = labels = data[:, -1]
+    labels = data[:, -1]
     _, label_counts = np.unique(labels, return_counts=True)
     label_probs = label_counts / len(labels)
     label_log_probs = np.log2(label_probs)
-    entropy = -1 * sum(label_probs * label_log_probs)
+    entropy = - sum(label_probs * label_log_probs)
     ###########################################################################
     return entropy
+
 
 def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     """
@@ -119,13 +120,31 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
               according to the feature values.
     """
     goodness = 0
-    groups = {} # groups[feature_value] = data_subset
+    groups = {}  # groups[feature_value] = data_subset
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    feature_col = data[:, feature]
+    feature_values, value_counts = np.unique(feature_col, return_counts=True)
+    groups = dict(zip(feature_values, np.split(data, np.cumsum(value_counts[:-1]))))
+    group_weights = value_counts / len(data)
+
+    # Calc goodness of split
+    if not gain_ratio:
+        impurity_before = impurity_func(data)
+        val_impurity = np.array([impurity_func(groups[value]) for value in feature_values])
+        goodness = impurity_before - np.sum(group_weights * val_impurity)
+
+    # Calc gain ratio
+    else:
+        log_group_weights = np.log2(group_weights)
+        split_info = - np.sum(group_weights * log_group_weights)
+
+        entropy_before = calc_entropy(data)
+        val_entropy = np.array([calc_entropy(groups[value]) for value in feature_values])
+        info_gain = entropy_before - np.sum(group_weights * val_entropy)
+
+        gain_ratio_value = info_gain / split_info
+        goodness = gain_ratio_value
+
     ###########################################################################
     return goodness, groups
 
