@@ -62,6 +62,7 @@ chi_table = {1: {0.5 : 0.45,
               0.05 : 19.68,
               0.0001 : 100000}}
 
+
 def calc_gini(data):
     """
     Calculate gini impurity measure of a dataset.
@@ -74,13 +75,13 @@ def calc_gini(data):
     """
     gini = 0.0
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    labels = labels = data[:, -1]
+    _, label_counts = np.unique(labels, return_counts=True)  # We ignore sorted values
+    label_probs = label_counts / len(labels)
+    gini = 1 - sum(label_probs ** 2)
     ###########################################################################
     return gini
+
 
 def calc_entropy(data):
     """
