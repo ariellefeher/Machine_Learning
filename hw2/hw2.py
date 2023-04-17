@@ -124,7 +124,10 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     ###########################################################################
     feature_col = data[:, feature]
     feature_values, value_counts = np.unique(feature_col, return_counts=True)
+
+    # zip the data, using cumulative sum by value_counts to split the rows into groups
     groups = dict(zip(feature_values, np.split(data, np.cumsum(value_counts[:-1]))))
+
     group_weights = value_counts / len(data)
 
     # Calc goodness of split
@@ -144,9 +147,9 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
 
         gain_ratio_value = info_gain / split_info
         goodness = gain_ratio_value
-
     ###########################################################################
     return goodness, groups
+
 
 class DecisionNode:
 
