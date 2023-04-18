@@ -122,17 +122,18 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     goodness = 0
     groups = {}  # groups[feature_value] = data_subset
     ###########################################################################
-    feature_col = data[:, feature]
+    data_copy = data
+    data_copy = data_copy[data_copy[:, -1].argsort()]  # Sort data by Class
+    feature_col = data_copy[:, feature]
     feature_values, value_counts = np.unique(feature_col, return_counts=True)
 
     # zip the data, using cumulative sum by value_counts to split the rows into groups
-    groups = dict(zip(feature_values, np.split(data, np.cumsum(value_counts[:-1]))))
-
-    group_weights = value_counts / len(data)
+    groups = dict(zip(feature_values, np.split(data_copy, np.cumsum(value_counts[:-1]))))
+    group_weights = value_counts / len(data_copy)
 
     # Calc goodness of split
     if not gain_ratio:
-        impurity_before = impurity_func(data)
+        impurity_before = impurity_func(data_copy)
         val_impurity = np.array([impurity_func(groups[value]) for value in feature_values])
         goodness = impurity_before - np.sum(group_weights * val_impurity)
 
@@ -141,7 +142,7 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
         log_group_weights = np.log2(group_weights)
         split_info = - np.sum(group_weights * log_group_weights)
 
-        entropy_before = calc_entropy(data)
+        entropy_before = calc_entropy(data_copy)
         val_entropy = np.array([calc_entropy(groups[value]) for value in feature_values])
         info_gain = entropy_before - np.sum(group_weights * val_entropy)
 
