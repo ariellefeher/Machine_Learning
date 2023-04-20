@@ -131,23 +131,18 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     groups = dict(zip(feature_values, np.split(data_copy, np.cumsum(value_counts[:-1]))))
     group_weights = value_counts / len(data_copy)
 
+    impurity_func = calc_entropy if gain_ratio else impurity_func
+
     # Calc goodness of split
-    if not gain_ratio:
-        impurity_before = impurity_func(data_copy)
-        val_impurity = np.array([impurity_func(groups[value]) for value in feature_values])
-        goodness = impurity_before - np.sum(group_weights * val_impurity)
+    impurity_before = impurity_func(data_copy)
+    val_impurity = np.array([impurity_func(groups[value]) for value in feature_values])
+    goodness = impurity_before - np.sum(group_weights * val_impurity)
 
     # Calc gain ratio
-    else:
+    if gain_ratio:
         log_group_weights = np.log2(group_weights)
         split_info = - np.sum(group_weights * log_group_weights)
-
-        entropy_before = calc_entropy(data_copy)
-        val_entropy = np.array([calc_entropy(groups[value]) for value in feature_values])
-        info_gain = entropy_before - np.sum(group_weights * val_entropy)
-
-        gain_ratio_value = info_gain / split_info
-        goodness = gain_ratio_value
+        gain_ratio_value = goodness / split_info
     ###########################################################################
     return goodness, groups
 
