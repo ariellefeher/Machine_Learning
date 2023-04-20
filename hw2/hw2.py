@@ -176,11 +176,10 @@ class DecisionNode:
         """
         pred = None
         ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
+        unique_labels, counts = np.unique(self.data[:, -1], return_counts = True)
+
+        # Set the prediction to the most common class label
+        pred = unique_labels[np.argmax(counts)]
         ###########################################################################
         return pred
         
@@ -206,11 +205,22 @@ class DecisionNode:
         This function has no return value
         """
         ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
+
+        # check if impurity is zero
+        if impurity_func(self.data) == 0:
+            self.terminal = True
+            return
+
+        best_feature = None
+        best_gain = None
+
+        # going over each feature and checking which has the lowest impurity
+        for feature in self.data:
+            unique_values = np.unique(self.data[:, feature])
+            for val in unique_values:
+                
+
+
         ###########################################################################
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
