@@ -218,7 +218,7 @@ class DecisionNode:
         for feature in self.data:
             unique_values = np.unique(self.data[:, feature])
             for val in unique_values:
-                
+
 
 
         ###########################################################################
