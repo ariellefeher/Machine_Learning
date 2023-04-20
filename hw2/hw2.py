@@ -211,9 +211,32 @@ class DecisionNode:
 
         # going over each feature and checking which has the lowest impurity
         for feature in self.data:
-            unique_values = np.unique(self.data[:, feature])
+            feature_data = self.data[:, feature]
+            unique_values = np.unique(feature_data)
+
             for val in unique_values:
-                pass
+                left_data = self.data[feature_data <= val]
+                right_data = self.data[feature_data > val]
+
+                if len(left_data) == 0 or len(right_data) == 0:
+                    # Skip if either left or right child has empty data
+                    continue
+
+                # Calculate the impurity of the children nodes
+                impurity_left = impurity_func(left_data)
+                impurity_right = impurity_func(right_data)
+
+                # Calculate the information gain or gain ratio based on the impurity function
+                if self.gain_ratio:
+                    gain = goodness_of_split(self.data, left_data, impurity_left, True)
+                else:
+                    gain = goodness_of_split(self.data, left_data, impurity_left, False)
+
+                if best_gain is None or gain > best_gain:
+                    # Update the best gain and best feature if the current gain is greater
+                    best_gain = gain
+                    best_feature = feature
+                    split_value = val
 
 
         ###########################################################################
