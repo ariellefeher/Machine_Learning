@@ -142,14 +142,18 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     if gain_ratio:
         log_group_weights = np.log2(group_weights)
         split_info = - np.sum(group_weights * log_group_weights)
-        gain_ratio_value = goodness / split_info
+
+        if gain_ratio and split_info == 0:
+            goodness = 0
+        else:
+            goodness = goodness / split_info
     ###########################################################################
     return goodness, groups
 
 
 class DecisionNode:
 
-    def __init__(self, data, feature=-1,depth=0, chi=1, max_depth=1000, gain_ratio=False):
+    def __init__(self, data, feature=-1, depth=0, chi=1, max_depth=1000, gain_ratio=False):
         
         self.data = data # the relevant data for the node
         self.feature = feature # column index of criteria being tested
@@ -161,8 +165,7 @@ class DecisionNode:
         self.chi = chi 
         self.max_depth = max_depth # the maximum allowed depth of the tree
         self.gain_ratio = gain_ratio 
-    
-    
+
     def calc_node_pred(self):
         """
         Calculate the node prediction.
@@ -178,8 +181,7 @@ class DecisionNode:
         pred = unique_labels[np.argmax(counts)]
         ###########################################################################
         return pred
-        
-    
+
     def add_child(self, node, val):
         """
         Adds a child node to self.children and updates self.children_values
@@ -188,8 +190,7 @@ class DecisionNode:
         """
         self.children.append(node)
         self.children_values.append(val)
-     
-    
+
     def split(self, impurity_func):
 
         """
@@ -207,36 +208,41 @@ class DecisionNode:
         # check if impurity is zero
         if impurity_func(self.data) == 0:
             self.terminal = True  # is a leaf
-        
-        if self.depth >= self.max_depth or self.terminal:
             return
+        
+        if self.depth >= self.max_depth:
+            return 
 
         best_feature = None
-        best_gain = None
-        feature_goodness_groups = {}
+        best_goodness = -1
+        best_groups = None
 
-        # going over each feature and checking which has the lowest impurity
-        for i, feature in enumerate(self.data[:-1]):
-            goodness, groups = goodness_of_split(
-                self.data[:-1], i, impurity_func, self.gain_ratio)
+        # Find the best feature
+        for feature_index in range(self.data.shape[1] - 1):
+            goodness, groups = goodness_of_split(self.data[:-1], feature_index, impurity_func, self.gain_ratio)
+            if goodness > best_goodness:
+                best_feature = feature_index
+                best_goodness = goodness
+                best_groups = groups
 
-            feature_goodness_groups[i] = (goodness, groups)
+        if best_feature is None:
+            # There is no good feature to split on
+            return
 
-        best_feature = max(feature_goodness_groups, key=lambda k: feature_goodness_groups[k][0])
         self.feature = best_feature
-        
-        best_groups = feature_goodness_groups[best_feature][1]
-        
-        for val in best_groups:
-            child_data = best_groups[val]
-            child = DecisionNode(
-                child_data, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
-            self.add_child(child, val)
 
+        for feature_val, val_subset in best_groups.items():
+            child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
+            self.add_child(child, feature_val)
+            child.split(impurity_func)
+
+        if impurity_func(self.data) == 0:
+            self.terminal = True  # is a leaf
+            return
 
         # TODO: add Chi
-        
         ###########################################################################
+
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
     """
@@ -254,13 +260,13 @@ def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
     """
     root = None
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    
+    root = DecisionNode(data, -1, 0, chi, max_depth, gain_ratio)
+    root.split(impurity)
+
     ###########################################################################
     return root
+
 
 def predict(root, instance):
     """
@@ -283,6 +289,7 @@ def predict(root, instance):
     ###########################################################################
     return pred
 
+
 def calc_accuracy(node, dataset):
     """
     Predict a given dataset using the decision tree and calculate the accuracy
@@ -302,6 +309,7 @@ def calc_accuracy(node, dataset):
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return accuracy
+
 
 def depth_pruning(X_train, X_test):
     """
@@ -355,6 +363,7 @@ def chi_pruning(X_train, X_test):
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return chi_training_acc, chi_testing_acc, depth
+
 
 def count_nodes(node):
     """
