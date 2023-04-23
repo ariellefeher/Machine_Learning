@@ -162,6 +162,7 @@ class DecisionNode:
         self.max_depth = max_depth # the maximum allowed depth of the tree
         self.gain_ratio = gain_ratio 
     
+    
     def calc_node_pred(self):
         """
         Calculate the node prediction.
@@ -178,6 +179,7 @@ class DecisionNode:
         ###########################################################################
         return pred
         
+    
     def add_child(self, node, val):
         """
         Adds a child node to self.children and updates self.children_values
@@ -187,6 +189,7 @@ class DecisionNode:
         self.children.append(node)
         self.children_values.append(val)
      
+    
     def split(self, impurity_func):
 
         """
@@ -203,42 +206,36 @@ class DecisionNode:
 
         # check if impurity is zero
         if impurity_func(self.data) == 0:
-            self.terminal = True
+            self.terminal = True  # is a leaf
+        
+        if self.depth >= self.max_depth or self.terminal:
             return
 
         best_feature = None
         best_gain = None
+        feature_goodness_groups = {}
 
         # going over each feature and checking which has the lowest impurity
-        for feature in self.data:
-            feature_data = self.data[:, feature]
-            unique_values = np.unique(feature_data)
+        for i, feature in enumerate(self.data[:-1]):
+            goodness, groups = goodness_of_split(
+                self.data[:-1], i, impurity_func, self.gain_ratio)
 
-            for val in unique_values:
-                left_data = self.data[feature_data <= val]
-                right_data = self.data[feature_data > val]
+            feature_goodness_groups[i] = (goodness, groups)
 
-                if len(left_data) == 0 or len(right_data) == 0:
-                    # Skip if either left or right child has empty data
-                    continue
-
-                # Calculate the impurity of the children nodes
-                impurity_left = impurity_func(left_data)
-                impurity_right = impurity_func(right_data)
-
-                # Calculate the information gain or gain ratio based on the impurity function
-                if self.gain_ratio:
-                    gain = goodness_of_split(self.data, left_data, impurity_left, True)
-                else:
-                    gain = goodness_of_split(self.data, left_data, impurity_left, False)
-
-                if best_gain is None or gain > best_gain:
-                    # Update the best gain and best feature if the current gain is greater
-                    best_gain = gain
-                    best_feature = feature
-                    split_value = val
+        best_feature = max(feature_goodness_groups, key=lambda k: feature_goodness_groups[k][0])
+        self.feature = best_feature
+        
+        best_groups = feature_goodness_groups[best_feature][1]
+        
+        for val in best_groups:
+            child_data = best_groups[val]
+            child = DecisionNode(
+                child_data, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
+            self.add_child(child, val)
 
 
+        # TODO: add Chi
+        
         ###########################################################################
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
