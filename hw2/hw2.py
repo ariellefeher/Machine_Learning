@@ -122,13 +122,15 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     goodness = 0
     groups = {}  # groups[feature_value] = data_subset
     ###########################################################################
-    data_copy = data
-    data_copy = data_copy[data_copy[:, -1].argsort()]  # Sort data by Class
+    data_copy = data.copy()
+    data_copy = data_copy[data_copy[:, feature].argsort()]  # Sort data by feature column
     feature_col = data_copy[:, feature]
     feature_values, value_counts = np.unique(feature_col, return_counts=True)
 
     # zip the data, using cumulative sum by value_counts to split the rows into groups
-    groups = dict(zip(feature_values, np.split(data_copy, np.cumsum(value_counts[:-1]))))
+    value_rows = np.split(data_copy, np.cumsum(value_counts[:-1]))
+    groups = dict(zip(feature_values, value_rows))
+
     group_weights = value_counts / len(data_copy)
 
     impurity_func = calc_entropy if gain_ratio else impurity_func
