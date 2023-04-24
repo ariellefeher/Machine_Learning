@@ -221,7 +221,7 @@ class DecisionNode:
 
         # Find the best feature
         for feature_index in range(self.data.shape[1] - 1):
-            goodness, groups = goodness_of_split(self.data[:-1], feature_index, impurity_func, self.gain_ratio)
+            goodness, groups = goodness_of_split(self.data, feature_index, impurity_func, self.gain_ratio)
             if goodness > best_goodness:
                 best_feature = feature_index
                 best_goodness = goodness
