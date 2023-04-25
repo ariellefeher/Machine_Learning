@@ -278,11 +278,15 @@ def predict(root, instance):
     """
     pred = None
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    curr_node = root
+    while not curr_node.terminal:
+        instance_feature_val = instance[curr_node.feature]
+        child_node = curr_node.children.get(instance_feature_val)
+        if child_node is None:
+            break
+        curr_node = child_node
+
+    pred = curr_node.pred
     ###########################################################################
     return pred
 
