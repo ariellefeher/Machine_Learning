@@ -78,7 +78,7 @@ def calc_gini(data):
     labels = data[:, -1]
     _, label_counts = np.unique(labels, return_counts=True)  # We ignore sorted values
     label_probs = label_counts / len(labels)  # is a nparray
-    gini = 1 - sum(label_probs ** 2)
+    gini = 1 - np.sum(np.square(label_probs))
     ###########################################################################
     return gini
 
@@ -99,7 +99,7 @@ def calc_entropy(data):
     _, label_counts = np.unique(labels, return_counts=True)
     label_probs = label_counts / len(labels)
     label_log_probs = np.log2(label_probs)
-    entropy = - sum(label_probs * label_log_probs)
+    entropy = - np.sum(label_probs * label_log_probs)
     ###########################################################################
     return entropy
 
@@ -122,28 +122,24 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     goodness = 0
     groups = {}  # groups[feature_value] = data_subset
     ###########################################################################
-    data_copy = data.copy()
-    data_copy = data_copy[data_copy[:, feature].argsort()]  # Sort data by feature column
-    feature_col = data_copy[:, feature]
+    feature_col = data[:, feature]
     feature_values, value_counts = np.unique(feature_col, return_counts=True)
-    group_weights = value_counts / len(data_copy)
+    impurity_before = impurity_func(data)
+    value_weights = value_counts / len(data)
 
-    # zip the data, using cumulative sum by value_counts to split the rows into groups
-    value_rows = np.split(data_copy, np.cumsum(value_counts[:-1]))
-    groups = dict(zip(feature_values, value_rows))
+    impurities_sum = 0
+    split_info = 0
+    for i, feature_value in enumerate(feature_values):
+        value_weight = value_weights[i]
+        value_subset = data[data[:, feature] == feature_value]
+        impurities_sum += value_weight * impurity_func(value_subset)
+        groups[feature_value] = value_subset
+        split_info -= value_weight * np.log2(value_weight)
 
-    # Calculate goodness of split / gain ratio if flag
-    impurity_func = calc_entropy if gain_ratio else impurity_func
-    impurity_before = impurity_func(data_copy)
-    val_impurity = np.array([impurity_func(groups[value]) for value in feature_values])
-    goodness = impurity_before - np.sum(group_weights * val_impurity)
+    goodness = impurity_before - impurities_sum
     if gain_ratio:
-        log_group_weights = np.log2(group_weights)
-        split_info = - np.sum(group_weights * log_group_weights)
-        if gain_ratio and split_info == 0:
-            goodness = 0
-        else:
-            goodness = goodness / split_info
+        split_info = max(split_info, 1e-9)  # To avoid division by 0
+        goodness = goodness / split_info
     ###########################################################################
     return goodness, groups
 
@@ -201,41 +197,34 @@ class DecisionNode:
         This function has no return value
         """
         ###########################################################################
-
-        # check if impurity is zero
-        if impurity_func(self.data) == 0:
-            self.terminal = True  # is a leaf
+        if self.depth >= self.max_depth or self.terminal:
             return
-        
-        if self.depth >= self.max_depth:
-            return 
 
-        best_feature = None
+        best_feature = -1
         best_goodness = -1
-        best_groups = None
+        best_groups = {}
 
         # Find the best feature
-        for feature_index in range(self.data.shape[1]):
+        for feature_index in range(self.data.shape[1] - 1):
             goodness, groups = goodness_of_split(self.data, feature_index, impurity_func, self.gain_ratio)
             if goodness > best_goodness:
                 best_feature = feature_index
                 best_goodness = goodness
                 best_groups = groups
 
-        if best_feature is None:
-            # There is no good feature to split on
-            return
-
         self.feature = best_feature
 
+        if best_goodness == 0:
+            self.terminal = True
+            return
+        if self.depth >= self.max_depth:
+            return
+
+        # Split the node
         for feature_val, val_subset in best_groups.items():
             child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
             self.add_child(child, feature_val)
             child.split(impurity_func)
-
-        if impurity_func(self.data) == 0:
-            self.terminal = True  # is a leaf
-            return
 
         # TODO: add Chi
         ###########################################################################
@@ -306,8 +295,8 @@ def calc_accuracy(node, dataset):
     correct_predictions = 0
     for instance in dataset:
         prediction = predict(node, instance)
-        if prediction == instance[-1]:
-            correct_predictions += 1
+        instance_label = instance[-1]
+        correct_predictions += int(prediction == instance_label)
     accuracy = 100 * (correct_predictions / len(dataset))
     ###########################################################################
     return accuracy
