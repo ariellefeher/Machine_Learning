@@ -175,7 +175,7 @@ class DecisionNode:
         unique_labels, counts = np.unique(self.data[:, -1], return_counts = True)
 
         # Set the prediction to the most common class label
-        pred = unique_labels[np.argmax(counts)]
+        pred = max(zip(unique_labels, counts), key=lambda x: x[1])[0]
         ###########################################################################
         return pred
 
@@ -215,7 +215,7 @@ class DecisionNode:
         best_groups = None
 
         # Find the best feature
-        for feature_index in range(self.data.shape[1] - 1):
+        for feature_index in range(self.data.shape[1]):
             goodness, groups = goodness_of_split(self.data, feature_index, impurity_func, self.gain_ratio)
             if goodness > best_goodness:
                 best_feature = feature_index
@@ -257,10 +257,8 @@ def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
     """
     root = None
     ###########################################################################
-    
     root = DecisionNode(data, -1, 0, chi, max_depth, gain_ratio)
     root.split(impurity)
-
     ###########################################################################
     return root
 
@@ -279,12 +277,14 @@ def predict(root, instance):
     pred = None
     ###########################################################################
     curr_node = root
-    while not curr_node.terminal:
+    while len(curr_node.children):
         instance_feature_val = instance[curr_node.feature]
-        child_node = curr_node.children.get(instance_feature_val)
-        if child_node is None:
+        try:
+            child_node_index = curr_node.children_values.index(instance_feature_val)  # returns ValueError if not found
+            child_node = curr_node.children[child_node_index]
+            curr_node = child_node
+        except ValueError:
             break
-        curr_node = child_node
 
     pred = curr_node.pred
     ###########################################################################
@@ -303,11 +303,11 @@ def calc_accuracy(node, dataset):
     """
     accuracy = 0
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    correct_predictions = 0
+    for instance in dataset:
+        prediction = predict(node, instance)
+        correct_predictions += int(prediction == instance[-1])
+    accuracy = 100 * (correct_predictions / len(dataset))
     ###########################################################################
     return accuracy
 
