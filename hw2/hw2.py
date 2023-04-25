@@ -172,10 +172,10 @@ class DecisionNode:
         """
         pred = None
         ###########################################################################
-        unique_labels, counts = np.unique(self.data[:, -1], return_counts = True)
+        unique_labels, counts = np.unique(self.data[:, -1], return_counts=True)
 
         # Set the prediction to the most common class label
-        pred = max(zip(unique_labels, counts), key=lambda x: x[1])[0]
+        pred = unique_labels[np.argmax(counts)]
         ###########################################################################
         return pred
 
@@ -306,7 +306,8 @@ def calc_accuracy(node, dataset):
     correct_predictions = 0
     for instance in dataset:
         prediction = predict(node, instance)
-        correct_predictions += int(prediction == instance[-1])
+        if prediction == instance[-1]:
+            correct_predictions += 1
     accuracy = 100 * (correct_predictions / len(dataset))
     ###########################################################################
     return accuracy
