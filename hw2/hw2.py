@@ -374,8 +374,8 @@ def chi_pruning(X_train, X_test):
         chi_training_acc.append(calc_accuracy(model_tree, X_train))
         depth.append(model_tree.height)
         chi_testing_acc.append(calc_accuracy(model_tree, X_test))
-        print(f"df={df}, alpha_risk={item[0]}, chi_val={chi_val} --> train acc. = {chi_training_acc[-1]} |||"
-              f" test acc. = {chi_testing_acc[-1]}, ||| height={depth[-1]}")
+        # print(f"df={df}, alpha_risk={item[0]}, chi_val={chi_val} --> train acc. = {chi_training_acc[-1]} |||"
+        #       f" test acc. = {chi_testing_acc[-1]}, ||| height={depth[-1]}")
     ###########################################################################
     return chi_training_acc, chi_testing_acc, depth
 
@@ -391,11 +391,13 @@ def count_nodes(node):
     """
     n_nodes = None
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    c = 0
+    if node.terminal:
+        return 1
+    else:
+        for child in node.children:
+            c += count_nodes(child)
+    n_nodes = c + 1
     ###########################################################################
     return n_nodes
 
