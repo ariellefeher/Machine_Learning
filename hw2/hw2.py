@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ### Chi square table values ###
-# The first key is the degree of freedom 
+# The first key is the degree of freedom
 # The second key is the p-value cut-off
 # The values are the chi-statistic that you need to use in the pruning
 
@@ -78,7 +78,7 @@ def calc_gini(data):
     labels = data[:, -1]
     _, label_counts = np.unique(labels, return_counts=True)  # We ignore sorted values
     label_probs = label_counts / len(labels)  # is a nparray
-    gini = 1 - np.sum(np.square(label_probs))
+    gini = 1 - sum(label_probs ** 2)
     ###########################################################################
     return gini
 
@@ -99,7 +99,7 @@ def calc_entropy(data):
     _, label_counts = np.unique(labels, return_counts=True)
     label_probs = label_counts / len(labels)
     label_log_probs = np.log2(label_probs)
-    entropy = - np.sum(label_probs * label_log_probs)
+    entropy = - sum(label_probs * label_log_probs)
     ###########################################################################
     return entropy
 
@@ -138,7 +138,7 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
 
     goodness = impurity_before - impurities_sum
     if gain_ratio:
-        split_info = max(split_info, 1e-9)  # To avoid division by 0
+        split_info = max(split_info, 1e-9)  # To avoid division by 0 warning
         goodness = goodness / split_info
     ###########################################################################
     return goodness, groups
@@ -148,17 +148,16 @@ class DecisionNode:
 
     def __init__(self, data, feature=-1, depth=0, chi=1, max_depth=1000, gain_ratio=False):
 
-        self.data = data # the relevant data for the node
-        self.feature = feature # column index of criteria being tested
-        self.pred = self.calc_node_pred() # the prediction of the node
-        self.depth = depth # the current depth of the node
-        self.children = [] # array that holds this nodes children
+        self.data = data  # the relevant data for the node
+        self.feature = feature  # column index of criteria being tested
+        self.pred = self.calc_node_pred()  # the prediction of the node
+        self.depth = depth  # the current depth of the node
+        self.children = []  # array that holds this nodes children
         self.children_values = []
-        self.terminal = False # determines if the node is a leaf
+        self.terminal = False  # determines if the node is a leaf
         self.chi = chi
-        self.max_depth = max_depth # the maximum allowed depth of the tree
+        self.max_depth = max_depth  # the maximum allowed depth of the tree
         self.gain_ratio = gain_ratio
-        self.height = 0
 
     def calc_node_pred(self):
         """
@@ -199,13 +198,12 @@ class DecisionNode:
         """
         ###########################################################################
         if self.depth >= self.max_depth or self.terminal:
-            return 1
+            return
 
+        # Find the best feature
         best_feature = -1
         best_goodness = -1
         best_groups = {}
-
-        # Find the best feature
         for feature_index in range(self.data.shape[1] - 1):
             goodness, groups = goodness_of_split(self.data, feature_index, impurity_func, self.gain_ratio)
             if goodness > best_goodness:
@@ -217,37 +215,55 @@ class DecisionNode:
 
         if best_goodness == 0:
             self.terminal = True
-            return 1
+            return
         if self.depth >= self.max_depth:
-            return 1
+            return
 
-        # Check Chi
-        pred_count = np.count_nonzero(self.data[:, -1] == self.pred)
-        pred_prob = pred_count / len(self.data)
-        feature_values, value_counts = np.unique(self.data[:, best_feature], return_counts=True)
-        chi_square = 0
-        for i, feature_value in enumerate(feature_values):
-            D_f = value_counts[i]
-            curr_subset = best_groups[feature_value]
-            curr_labels = curr_subset[: -1]
-            p_f = np.count_nonzero(curr_labels == self.pred)
-            n_f = len(curr_subset) - p_f
-            E_0 = D_f * pred_prob
-            E_1 = D_f * (1 - pred_prob)
-            chi_square += (((p_f - E_0) ** 2) / E_0) + (((n_f - E_1) ** 2) / E_1)
+        has_passed_chi_condition = self.check_chi_condition(best_groups)
 
-        if chi_square > self.chi:
-            # Split the node
+        if self.chi == 1:
+            # Chi square test is disabled - just spilt
             for feature_val, val_subset in best_groups.items():
-                child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
+                child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth,
+                                     self.gain_ratio)
                 self.add_child(child, feature_val)
-                self.height += child.split(impurity_func)
-            return 1
+                child.split(impurity_func)
 
-        else:
-            self.terminal = True
-            return 1
+        elif has_passed_chi_condition:
+            for feature_val, val_subset in best_groups.items():
+                child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth,
+                                     self.gain_ratio)
+                self.add_child(child, feature_val)
+                child.split(impurity_func)
         ###########################################################################
+
+    def check_chi_condition(self, subset):
+        """ A helper method that checks if the split for this feature
+         is random or good
+         Note that we have only 2 classes = e and p """
+        def calc_chi(data, subset):
+            chi_square = 0
+            e_count = np.count_nonzero(data[:, -1] == 'e')
+            e_prob = e_count / len(data)
+            p_prob = 1 - e_prob
+            for feature_val in subset:
+                val_subset = subset[feature_val]
+                D_f = len(val_subset)
+                p_f = np.count_nonzero(val_subset[:, -1] == 'e')
+                n_f = np.count_nonzero(val_subset[:, -1] == 'p')
+                E_e = D_f * e_prob
+                E_p = D_f * p_prob
+                chi_square += (((p_f - E_e) ** 2) / E_e) + (((n_f - E_p) ** 2) / E_p)
+            return chi_square
+
+        feature_df = len(subset) - 1  # The number of different values minus 1
+        chi_threshold = chi_table.get(feature_df).get(self.chi)
+        chi_square = calc_chi(self.data, subset)
+
+        if chi_threshold is None:
+            return False
+
+        return feature_df > 0 and chi_square > chi_threshold
 
 
 def build_tree(data, impurity, gain_ratio=False, chi=1, max_depth=1000):
@@ -351,12 +367,12 @@ def chi_pruning(X_train, X_test):
     """
     Calculate the training and testing accuracies for different chi values
     using the best impurity function and the gain_ratio flag you got
-    previously. 
+    previously.
 
     Input:
     - X_train: the training data where the last column holds the labels
     - X_test: the testing data where the last column holds the labels
- 
+
     Output:
     - chi_training_acc: the training accuracy per chi value
     - chi_testing_acc: the testing accuracy per chi value
@@ -366,37 +382,44 @@ def chi_pruning(X_train, X_test):
     chi_testing_acc = []
     depth = []
     ###########################################################################
-    df = 1
-    df_dict = chi_table[df]
-    for item in df_dict.items():
-        chi_val = item[1]
-        model_tree = build_tree(X_train, calc_entropy, True, chi_val)
-        chi_training_acc.append(calc_accuracy(model_tree, X_train))
-        depth.append(model_tree.height)
+    for alpha_risk in chi_table[1].keys():
+        model_tree = build_tree(X_train, calc_entropy, True, alpha_risk)
         chi_testing_acc.append(calc_accuracy(model_tree, X_test))
-        # print(f"df={df}, alpha_risk={item[0]}, chi_val={chi_val} --> train acc. = {chi_training_acc[-1]} |||"
-        #       f" test acc. = {chi_testing_acc[-1]}, ||| height={depth[-1]}")
+        chi_training_acc.append(calc_accuracy(model_tree, X_train))
+        depth.append(get_tree_depth(model_tree))
     ###########################################################################
     return chi_training_acc, chi_testing_acc, depth
+
+
+def get_tree_depth(node):
+    """ A helper function for calculating the depth of a tree """
+    if len(node.children) == 0:
+        return 0
+    all_depths = []  # Holds the depth of all the node's children
+    for child in node.children:
+        curr_depth = get_tree_depth(child)
+        all_depths.append(curr_depth)
+    return max(all_depths) + 1
 
 
 def count_nodes(node):
     """
     Count the number of node in a given tree
- 
+
     Input:
     - node: a node in the decision tree.
- 
+
     Output: the number of nodes in the tree.
     """
     n_nodes = None
     ###########################################################################
     c = 0
-    if node.terminal:
+    if len(node.children) == 0:
         return 1
     else:
         for child in node.children:
             c += count_nodes(child)
+
     n_nodes = c + 1
     ###########################################################################
     return n_nodes
