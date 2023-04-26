@@ -220,13 +220,34 @@ class DecisionNode:
         if self.depth >= self.max_depth:
             return
 
-        # Split the node
-        for feature_val, val_subset in best_groups.items():
-            child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
-            self.add_child(child, feature_val)
-            child.split(impurity_func)
+        # Check Chi
+        unique_labels, label_counts = np.unique(self.data[:, -1], return_counts=True)
+        label_probs = label_counts / len(self.data)
 
-        # TODO: add Chi
+        feature_values, value_counts = np.unique(self.data[:, best_feature], return_counts=True)
+        pred_index = unique_labels.index(self.pred)
+        pred_prob = label_probs[pred_index]
+        chi_square = 0
+        for i, feature_value in enumerate(feature_values):
+            D_f = value_counts[i]
+            curr_subset = best_groups[feature_value]
+            curr_labels = curr_subset[: -1]
+            p_f = np.count_nonzero(curr_labels == self.pred)
+            n_f = len(curr_subset) - p_f
+            E_0 = D_f * pred_prob
+            E_1 = D_f * (1 - pred_prob)
+            chi_square += (((p_f - E_0) ** 2) / E_0) + (((n_f - E_1) ** 2) / E_1)
+
+        if chi_square > self.chi:
+            # Split the node
+            for feature_val, val_subset in best_groups.items():
+                child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
+                self.add_child(child, feature_val)
+                child.split(impurity_func)
+
+        else:
+            self.terminal = True
+            return
         ###########################################################################
 
 
@@ -343,14 +364,11 @@ def chi_pruning(X_train, X_test):
     - depths: the tree depth for each chi value
     """
     chi_training_acc = []
-    chi_testing_acc  = []
+    chi_testing_acc = []
     depth = []
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
+    dof_2_values = chi_table[2]
+
     ###########################################################################
     return chi_training_acc, chi_testing_acc, depth
 
