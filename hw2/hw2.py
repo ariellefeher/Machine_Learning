@@ -158,6 +158,7 @@ class DecisionNode:
         self.chi = chi
         self.max_depth = max_depth # the maximum allowed depth of the tree
         self.gain_ratio = gain_ratio
+        self.height = 0
 
     def calc_node_pred(self):
         """
@@ -198,7 +199,7 @@ class DecisionNode:
         """
         ###########################################################################
         if self.depth >= self.max_depth or self.terminal:
-            return
+            return 1
 
         best_feature = -1
         best_goodness = -1
@@ -216,17 +217,14 @@ class DecisionNode:
 
         if best_goodness == 0:
             self.terminal = True
-            return
+            return 1
         if self.depth >= self.max_depth:
-            return
+            return 1
 
         # Check Chi
-        unique_labels, label_counts = np.unique(self.data[:, -1], return_counts=True)
-        label_probs = label_counts / len(self.data)
-
+        pred_count = np.count_nonzero(self.data[:, -1] == self.pred)
+        pred_prob = pred_count / len(self.data)
         feature_values, value_counts = np.unique(self.data[:, best_feature], return_counts=True)
-        pred_index = unique_labels.index(self.pred)
-        pred_prob = label_probs[pred_index]
         chi_square = 0
         for i, feature_value in enumerate(feature_values):
             D_f = value_counts[i]
@@ -243,11 +241,12 @@ class DecisionNode:
             for feature_val, val_subset in best_groups.items():
                 child = DecisionNode(val_subset, best_feature, self.depth + 1, self.chi, self.max_depth, self.gain_ratio)
                 self.add_child(child, feature_val)
-                child.split(impurity_func)
+                self.height += child.split(impurity_func)
+            return 1
 
         else:
             self.terminal = True
-            return
+            return 1
         ###########################################################################
 
 
@@ -367,8 +366,16 @@ def chi_pruning(X_train, X_test):
     chi_testing_acc = []
     depth = []
     ###########################################################################
-    dof_2_values = chi_table[2]
-
+    df = 1
+    df_dict = chi_table[df]
+    for item in df_dict.items():
+        chi_val = item[1]
+        model_tree = build_tree(X_train, calc_entropy, True, chi_val)
+        chi_training_acc.append(calc_accuracy(model_tree, X_train))
+        depth.append(model_tree.height)
+        chi_testing_acc.append(calc_accuracy(model_tree, X_test))
+        print(f"df={df}, alpha_risk={item[0]}, chi_val={chi_val} --> train acc. = {chi_training_acc[-1]} |||"
+              f" test acc. = {chi_testing_acc[-1]}, ||| height={depth[-1]}")
     ###########################################################################
     return chi_training_acc, chi_testing_acc, depth
 
